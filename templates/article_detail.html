@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block css %}
+    <style>
+        #div_digg {
+            float: right;
+            margin-bottom: 10px;
+            margin-right: 30px;
+            font-size: 12px;
+            width: 125px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .diggit {
+            float: left;
+            width: 46px;
+            height: 52px;
+            background: url(/static/img/upup.gif) no-repeat;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 2px;
+            padding-top: 5px;
+        }
+
+        #div_digg .diggnum {
+            line-height: 1.5em !important;
+        }
+
+        .buryit {
+            float: right;
+            margin-left: 20px;
+            width: 46px;
+            height: 52px;
+            background: url(/static/img/downdown.gif) no-repeat;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 2px;
+            padding-top: 5px;
+        }
+
+        #div_digg .burynum {
+            line-height: 1.5em !important;
+        }
+
+
+    </style>
+{% endblock %}
+
+
+{% block content %}
+
+    <h1>{{ article.name }}</h1>
+    <p>{{ article.content|safe }}</p>
+    <div class="clearfix">
+        <div id="div_digg">
+            <div class="diggit action">
+                <span class="diggnum" id="digg_count">{{ article.up_num }}</span>
+            </div>
+            <div class="buryit action">
+                <span class="burynum" id="bury_count">{{ article.down_num }}</span>
+            </div>
+            <div class="clear"></div>
+            <div class="diggword" id="digg_tip">
+            </div>
+        </div>
+    </div>
+    <div>
+        <ul class="list-group">
+            <li class="list-group-item">
+                {% for comment in comments_list %}
+                    <span>#{{ forloop.counter }}楼</span>
+                    <span>{{ comment.create_time|date:'Y-m-d H:m:s' }}</span>
+                    <span>{{ comment.user.username }}</span>
+                    <span class="pull-right reply" user_id='{{ comment.user.pk }}'
+                          user_name='{{ comment.user.username }}'><a>回复</a></span>
+
+                    <div>
+                        {% if comment.parent %}
+                            @{{ comment.parent.user.username }}
+                        {% endif %}
+                        {{ comment.content }}</div>
+                {% endfor %}
+            </li>
+        </ul>
+
+    </div>
+
+
+    {% if request.user.is_authenticated %}
+        <div>
+            <p><span class="glyphicon glyphicon-comment"></span>发表评论</p>
+            <div>
+                <textarea name="comment" id="id_comment" cols="60" rows="10"></textarea>
+            </div>
+            <button class="btn btn-primary" id="id_submit">提交评论</button>
+        </div>
+    {% else %}
+        <p>请<a href="/login/">登录</a></p>
+
+    {% endif %}
+
+{% endblock %}
+
+{% block js %}
+    <script>
+        $('.action').click(function () {
+            let is_up = $(this).hasClass('diggit')
+            let $div = $(this)
+            $.ajax({
+                'url': '/up_or_down/',
+                'type': 'post',
+                'data': {
+                    'article_id': '{{ article.pk }}',
+                    'is_up': is_up,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success: function (args) {
+                    if (args.code == 1000) {
+                        $('#digg_tip').text(args.msg)
+                        let oldNum = $div.children().text();
+                        $div.children().text(Number(oldNum) + 1)
+                    } else {
+                        $('#digg_tip').html(args.msg)
+                    }
+                }
+            })
+        })
+
+        let parent = null;
+        $('#id_submit').click(function () {
+            let content = $('#id_comment').val();
+            if (parent) {
+                let indeNum = content.indexOf('\n') + 1;
+                content = content.slice(indeNum)
+            }
+            $.ajax({
+                url: '/comments/',
+                type: 'post',
+                data: {
+                    'article_id': '{{ article.pk }}',
+                    'content': content,
+                    'parent': parent,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success: function (args) {
+                    if (args.code == 1000) {
+
+                        let username = '{{ request.user.username }}';
+                        let temp = `
+                        <li class="list-group-item">
+                        <span>${username}</span>
+                        <div>${content}</div>
+                        </li>
+                        `
+                        $('.list-group').append(temp)
+                        parent = null
+                        $('#id_comment').val('')
+                    }
+                }
+            })
+        })
+        $('.reply').click(function () {
+            parent = $(this).attr('user_id')
+            $('#id_comment').val('@' + $(this).attr('user_name') + '\n').focus()
+        })
+
+
+    </script>
+
+{% endblock %}

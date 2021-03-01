@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    {% load static %}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <h1 class="text-center">注册</h1>
+            <form id="regform">
+            {% csrf_token %}
+                {% for form in regform %}
+                    <label for="">{{ form.label}}</label>
+                {{ form }}
+                    <span style="color: red" class="pull-right"></span>
+                {% endfor %}
+            <br>
+                <label for="avatar_file">头像
+                <img src="{% static 'img/default.png' %}" width="80" id="avtar_img">
+                </label>
+                <input type="file" id="avatar_file" style="display: none">
+            </form>
+            <button value="注册" type="submit" id="id_submit" class="btn btn-primary pull-right" >注册</button>
+        </div>
+    </div>
+</div>
+<script>
+    $('#avatar_file').change(function () {
+        let img_file_reader = new FileReader();
+        let img_obj = $(this)[0].files[0]
+        img_file_reader.readAsDataURL(img_obj)
+        img_file_reader.onload = function () {
+            $('#avtar_img').attr('src', img_file_reader.result)
+        }
+    })
+    $('#id_submit').click(function () {
+        myform_data = new FormData();
+        $.each($('#regform').serializeArray(), function (index, obj) {
+            myform_data.append(obj.name, obj.value)
+        });
+        let file_obj = $('#avatar_file')[0].files[0]
+        myform_data.append('avatar', file_obj);
+        $.ajax({
+            url: '',
+            type:'post',
+            data: myform_data,
+            processData: false,
+            contentType: false,
+            success: function (args) {
+                if (args.code==1000){
+                    window.location.href=args.url
+                }else{
+                    $.each(args.msg, function (index, obj) {
+                        let targetid = '#id_' + index;
+                        $(targetid).next().text(obj[0])
+                        $(targetid).parent().addClass('has-error')
+                    })
+                }
+            }
+        })
+
+    })
+    $('input').focus(function () {
+        $(this).next().text('').parent().removeClass('has-error')
+    })
+
+</script>
+</body>
+</html>
